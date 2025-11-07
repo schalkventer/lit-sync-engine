@@ -1,0 +1,182 @@
+import { LitElement, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { produce } from "immer";
+import { z } from "zod";
+
+import { Repo } from "@automerge/automerge-repo";
+import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
+
+const LOCAL_KEY = "779ba4b7-969e-4d89-bb2b-a7df272b46ed";
+
+const schema = z.object({
+  id: z.uuid(),
+  title: z.string().min(1).max(100),
+  completed: z.boolean().default(false),
+  createdAt: z.coerce.date().default(() => new Date()),
+  updatedAt: z.coerce.date().nullable(),
+  archived: z.boolean().default(false),
+});
+
+type Task = z.infer<typeof schema>;
+
+const createTasks = (props: { title: string }): Task => {
+  const { title } = props;
+
+  return schema.parse({
+    id: crypto.randomUUID(),
+    title,
+    completed: false,
+    createdAt: new Date(),
+    updatedAt: null,
+    archived: false,
+  });
+};
+
+const local = {
+  set: (data: Record<string, Task>) => {
+    localStorage.setItem(
+      LOCAL_KEY,
+      JSON.stringify(z.record(z.string(), schema).parse(data))
+    );
+  },
+
+  get: (): Record<string, Task> => {
+    const data = localStorage.getItem(LOCAL_KEY);
+
+    if (!data) {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify({}));
+      return {};
+    }
+
+    return z.record(z.string(), schema).parse(JSON.parse(data));
+  },
+};
+
+type State = {
+  items: Record<string, Task>;
+  controls: {
+    search: string;
+    completed: "any" | "none" | "only";
+  };
+};
+
+const repo = new Repo({
+  network: [],
+  storage: new IndexedDBStorageAdapter(),
+});
+
+@customElement("app-element")
+export class MyElement extends LitElement {
+  @state()
+  state: State = {
+    controls: {
+      completed: "any",
+      search: "",
+    },
+    items: local.get(),
+  };
+
+  mutate(fn: (current: State) => void) {
+    const next = produce(this.state, fn);
+    this.state = next;
+    local.set(this.state.items);
+  }
+
+  render() {
+    return html`
+      <header>
+        <h2>Yet Another Todo App</h2>
+
+        <button popovertarget="add-task-popover">Add Task</button>
+  <div id="add-task-popover" popover="manual">
+        <form
+          @submit=${(event: any) => {
+            event.preventDefault();
+            const { target } = event;
+
+            if (!(target instanceof HTMLFormElement)) {
+              throw new Error("Expected target to be a HTMLFormElement");
+            }
+
+            const title = new FormData(target).get("title");
+            const newTask = createTasks({ title: String(title) });
+
+            this.mutate((x) => {
+              x.items[newTask.id] = newTask;
+            });
+
+            target.reset();
+          }}
+        >
+          <input name="title" placeholder="Task Title" required />
+          <button type="button">Cancel</button>
+          <button type="submit">Add Task</button>
+        </form>
+</div>
+        <h2>Filters</h2>
+
+        <input
+          type="search"
+          placeholder="Search Tasks"
+          @input=${(event: any) => {
+            const target = event.target;
+
+            this.mutate((x) => {
+              x.controls.search = target.value;
+            });
+          }}
+        />
+
+        <h2>Tasks</h2>
+        ${
+          this.state.controls.search &&
+          html`<div>Results for "${this.state.controls.search}"</div>`
+        }
+
+        <ul>
+          ${Object.keys(this.state.items)
+            .filter((id) => {
+              const item = this.state.items[id];
+
+              if (this.state.controls.search) {
+                const search = this.state.controls.search.toLowerCase();
+                if (!item.title.toLowerCase().includes(search)) return false;
+              }
+
+              if (this.state.controls.completed === "only" && !item.completed)
+                return false;
+
+              if (this.state.controls.completed === "none" && item.completed)
+                return false;
+
+              return true;
+            })
+            .map((id) => {
+              const item = this.state.items[id];
+
+              return html`<li>
+                <input
+                  type="checkbox"
+                  ?checked=${this.state.items[id].completed}
+                  @change=${() => {
+                    this.mutate((x) => {
+                      x.items[id].completed = !x.items[id].completed;
+                    });
+                  }}
+                />
+                <span>${item.title}</span>
+              </li>`;
+            })}
+        </ul>
+
+        <div>Total Tasks: ${Object.keys(this.state.items).length}</div>
+      </div>
+    `;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "app-element": MyElement;
+  }
+}

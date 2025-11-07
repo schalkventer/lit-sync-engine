@@ -1,0 +1,26 @@
+{
+  "name": "lit-sync-engine",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@automerge/automerge": "^3.2.0",
+    "@automerge/automerge-repo-network-broadcastchannel": "^2.4.0",
+    "@automerge/automerge-repo-storage-indexeddb": "^2.4.0",
+    "@automerge/vanillajs": "^2.4.0",
+    "fast-sort": "^3.4.1",
+    "immer": "^10.2.0",
+    "lit": "^3.3.1",
+    "vite-plugin-wasm": "^3.5.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^7.1.7"
+  }
+}
