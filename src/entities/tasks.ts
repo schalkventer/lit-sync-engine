@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const schema = z.object({
   id: z.uuid(),
-  title: z.string().min(1).max(100),
+  title: z.string(),
   completed: z.boolean().default(false),
   createdAt: z.coerce.date().default(() => new Date()),
   updatedAt: z.coerce.date().nullable(),

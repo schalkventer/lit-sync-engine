@@ -2,9 +2,9 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { produce } from "immer";
 import { type Task, createTask } from "../entities/tasks";
-import { createLocalData } from "../services/data";
+import { createIDBData } from "../services/data";
 import { createAuth } from "../services/auth";
-import { createLocalSync } from "../services/sync";
+import { createIDBSync } from "../services/sync";
 import { faker } from "@faker-js/faker";
 
 type Tasks = Record<string, Task>;
@@ -15,11 +15,11 @@ type Controls = {
   completed: "any" | "none" | "only";
 };
 
-@customElement("app-local")
-export class AppLocal extends LitElement {
+@customElement("app-idb")
+export class AppIDB extends LitElement {
   auth = createAuth();
-  data = createLocalData();
-  sync = createLocalSync();
+  data = createIDBData();
+  sync = createIDBSync();
 
   @state()
   syncing: boolean = false;
@@ -247,6 +247,6 @@ export class AppLocal extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "app-local": AppLocal;
+    "app-idb": AppIDB;
   }
 }
